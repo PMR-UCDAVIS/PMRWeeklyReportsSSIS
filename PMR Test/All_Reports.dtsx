@@ -11,8 +11,8 @@
   DTS:LocaleID="1033"
   DTS:ObjectName="All_Reports"
   DTS:PackageType="5"
-  DTS:VersionBuild="58"
-  DTS:VersionGUID="{4802A8E1-50E7-4E43-B364-4384834E65B8}">
+  DTS:VersionBuild="59"
+  DTS:VersionGUID="{8414B1E3-F686-4E1B-9391-2C7A1C0385A4}">
   <DTS:Property
     DTS:Name="PackageFormatVersion">8</DTS:Property>
   <DTS:ConnectionManagers>
@@ -27,7 +27,7 @@
           <DTS:Password
             DTS:Name="Password"
             Sensitive="1"
-            Encrypted="1">AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAMGohUNWOM0SHgfIBN1Ae0AAAAAAIAAAARABUAFMAAAADZgAAwAAAABAAAAAr1GPYprWsh9VrzOFm+r8cAAAAAASAAACgAAAAEAAAACGH1GzEarcMUaXLaQj08RAgAAAA1vsAsGbaxD/JRcu+Hh67hMMJOe1EWOqjyEq0dGLxSiIUAAAAt3xPf/PEFNMyrTU7UmeRfMD56/c</DTS:Password>
+            Encrypted="1">AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAMGohUNWOM0SHgfIBN1Ae0AAAAAAIAAAARABUAFMAAAADZgAAwAAAABAAAABzXRgdQpmMxK/47Y8veniNAAAAAASAAACgAAAAEAAAAKPUg8OhOl96OSTEl8rqBEogAAAAuozWvPFOzOILWGOlAM/lHbDIJUiM2/FMRSNuDQLnXisUAAAARCAl3z9OUrG9BOLjdvOgM4vqeuk</DTS:Password>
         </DTS:ConnectionManager>
       </DTS:ObjectData>
     </DTS:ConnectionManager>
@@ -1267,9 +1267,9 @@ SELECT Contact_Date
        , Entered_before_visit
        , Number_of_Same_Day_Visits
        , CASE WHEN CR_Empty &lt;&gt; '' THEN 'PROBLEM' 
-         WHEN Word_Count &lt; 100 THEN 'PROBLEM'
+         WHEN Word_Count &lt; 80 THEN 'PROBLEM'
          WHEN Entered_before_visit &lt;&gt; '' THEN 'PROBLEM'
-         WHEN Number_of_Same_Day_Visits &gt;= 5 THEN 'PROBLEM'
+         WHEN Number_of_Same_Day_Visits &gt;= 7 THEN 'PROBLEM'
            ELSE '' END AS "Problem"
        , SUMMARY 
        , SYSDATE as "DATE_RUN"
@@ -19691,7 +19691,6 @@ FROM ACTIVE_STAFF_PRE</property>
       DTS:refId="Package\Send Mail Task"
       DTS:CreationName="Microsoft.SendMailTask"
       DTS:Description="Send Mail Task"
-      DTS:Disabled="True"
       DTS:DTSID="{b0f62e38-e90c-4b37-a8a4-40ec4e24be2f}"
       DTS:ExecutableType="Microsoft.SendMailTask"
       DTS:LocaleID="-1"
@@ -19760,7 +19759,7 @@ Error Source: " +  @[System::SourceName]</DTS:PropertyExpression>
           SendMailTask:From="pmats@ucdavis.edu"
           SendMailTask:To="agdickens@ucdavis.edu;lpardau@ucdavis.edu;stao@ucdavis.edu"
           SendMailTask:Subject="Weekly Reports Refreshed"
-          SendMailTask:MessageSource="Hi Team, &#xA;&#xA;The weekly reports have been refreshed!&#xA;&#xA;Nate will run refresh the Prospect Pool Spreadsheet when he comes in Monday Morning." xmlns:SendMailTask="www.microsoft.com/sqlserver/dts/tasks/sendmailtask" />
+          SendMailTask:MessageSource="Hi Team, &#xA;&#xA;The weekly reports have been refreshed!&#xA;&#xA; Please refresh the Prospect Pool Spreadsheet on Monday morning." xmlns:SendMailTask="www.microsoft.com/sqlserver/dts/tasks/sendmailtask" />
       </DTS:ObjectData>
     </DTS:Executable>
     <DTS:Executable
@@ -23963,21 +23962,63 @@ FROM ALLTIME_NUM_DQ_BY_MR_DO
                       description="Specifies the SQL statement used by the component to extract data."
                       expressionType="Notify"
                       name="SqlCommand"
-                      UITypeEditor="Microsoft.DataTransformationServices.Controls.ModalMultilineStringEditor">SELECT CR.ID_NUMBER as "ID_NUM"
+                      UITypeEditor="Microsoft.DataTransformationServices.Controls.ModalMultilineStringEditor">With Spouse_DQ as (
+SELECT CR.ID_NUMBER
+       , POOL.SPOUSE_ID_NUMBER as SPOUSE_ID
        , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
-                 WHERE C.CONTACT_OUTCOME = 'QU' AND CR.ID_NUMBER = C.ID_NUMBER) AS "Last Qualification CR"
+                 WHERE C.CONTACT_OUTCOME = 'QU' AND POOL.SPOUSE_ID_NUMBER = C.ID_NUMBER) AS Last_Qualification_CR
        , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
-                 WHERE C.CONTACT_OUTCOME = 'DD' AND CR.ID_NUMBER = C.ID_NUMBER) AS "Last Disqualification CR"
+                 WHERE C.CONTACT_OUTCOME = 'DD' AND POOL.SPOUSE_ID_NUMBER = C.ID_NUMBER) AS Last_Disqualification_CR
        , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
-                 WHERE C.CONTACT_OUTCOME = 'NR' AND CR.ID_NUMBER = C.ID_NUMBER) AS "Last Non-Responsive CR" 
+                 WHERE C.CONTACT_OUTCOME = 'NR' AND POOL.SPOUSE_ID_NUMBER = C.ID_NUMBER) AS Last_Non_Responsive_CR
        , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
-                 WHERE C.CONTACT_OUTCOME = 'NN' AND CR.ID_NUMBER = C.ID_NUMBER) AS "Last Not Now CR" 
+                 WHERE C.CONTACT_OUTCOME = 'NN' AND POOL.SPOUSE_ID_NUMBER = C.ID_NUMBER) AS Last_Not_Now_CR
        , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
-                 WHERE C.CONTACT_OUTCOME = 'IP' AND CR.ID_NUMBER = C.ID_NUMBER) AS "Last Contacted-In Process CR"
+                 WHERE C.CONTACT_OUTCOME = 'IP' AND POOL.SPOUSE_ID_NUMBER = C.ID_NUMBER) AS Last_Contacted_In_Process_CR
        , SYSDATE AS "Qual_Run"
 FROM ADVANCE.CONTACT_REPORT CR
+     LEFT JOIN ADVANCE.ucdr_prospect_pool POOL ON CR.Id_Number = POOL.ID_NUMBER
 WHERE CR.CONTACT_OUTCOME in ('QU', 'DD', 'NR', 'NN', 'IP')
-GROUP BY CR.ID_NUMBER</property>
+GROUP BY CR.ID_NUMBER, POOL.SPOUSE_ID_NUMBER 
+)
+
+, Primary_DQ as (
+SELECT CR.ID_NUMBER as ID_NUM
+       , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
+                 WHERE C.CONTACT_OUTCOME = 'QU' AND CR.ID_NUMBER = C.ID_NUMBER) AS Last_Qualification_CR
+       , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
+                 WHERE C.CONTACT_OUTCOME = 'DD' AND CR.ID_NUMBER = C.ID_NUMBER) AS Last_Disqualification_CR
+       , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
+                 WHERE C.CONTACT_OUTCOME = 'NR' AND CR.ID_NUMBER = C.ID_NUMBER) AS Last_Non_Responsive_CR
+       , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
+                 WHERE C.CONTACT_OUTCOME = 'NN' AND CR.ID_NUMBER = C.ID_NUMBER) AS Last_Not_Now_CR
+       , (SELECT MAX(C.CONTACT_DATE) FROM ADVANCE.CONTACT_REPORT C 
+                 WHERE C.CONTACT_OUTCOME = 'IP' AND CR.ID_NUMBER = C.ID_NUMBER) AS Last_Contacted_In_Process_CR
+FROM ADVANCE.CONTACT_REPORT CR
+     LEFT JOIN ADVANCE.ucdr_prospect_pool POOL ON CR.Id_Number = POOL.ID_NUMBER
+WHERE CR.CONTACT_OUTCOME in ('QU', 'DD', 'NR', 'NN', 'IP')
+GROUP BY CR.ID_NUMBER
+)
+
+SELECT PDQ.ID_NUM
+       , CASE WHEN SDQ.Last_Qualification_CR IS NULL THEN PDQ.Last_Qualification_CR
+              WHEN PDQ.Last_Qualification_CR &gt; SDQ.Last_Qualification_CR THEN PDQ.Last_Qualification_CR
+              ELSE SDQ.Last_Qualification_CR END AS "Last Qualification CR"
+       , CASE WHEN SDQ.Last_Disqualification_CR IS NULL THEN PDQ.Last_Disqualification_CR
+              WHEN PDQ.Last_Disqualification_CR &gt; SDQ.Last_Disqualification_CR THEN PDQ.Last_Disqualification_CR
+              ELSE SDQ.Last_Disqualification_CR END AS "Last Disqualification CR"
+       , CASE WHEN SDQ.Last_Non_Responsive_CR IS NULL THEN PDQ.Last_Non_Responsive_CR
+              WHEN PDQ.Last_Non_Responsive_CR &gt; SDQ.Last_Non_Responsive_CR THEN PDQ.Last_Non_Responsive_CR
+              ELSE SDQ.Last_Non_Responsive_CR END AS "Last Non-Responsive CR"
+       , CASE WHEN SDQ.Last_Not_Now_CR IS NULL THEN PDQ.Last_Not_Now_CR
+              WHEN PDQ.Last_Not_Now_CR &gt; SDQ.Last_Not_Now_CR THEN PDQ.Last_Not_Now_CR
+              ELSE SDQ.Last_Not_Now_CR END AS "Last Not Now CR"
+       , CASE WHEN SDQ.Last_Contacted_In_Process_CR IS NULL THEN PDQ.Last_Contacted_In_Process_CR
+              WHEN PDQ.Last_Contacted_In_Process_CR &gt; SDQ.Last_Contacted_In_Process_CR THEN PDQ.Last_Contacted_In_Process_CR
+              ELSE SDQ.Last_Contacted_In_Process_CR END AS "Last Contacted-In Process CR"
+       , SYSDATE AS "Qual_Run"
+FROM Primary_DQ PDQ
+     LEFT JOIN Spouse_DQ SDQ ON PDQ.ID_NUM = SDQ.ID_NUMBER</property>
                     <property
                       dataType="System.Int32"
                       description="The number of seconds before a command times out.  A value of 0 indicates an infinite time-out."
@@ -27429,7 +27470,6 @@ WHERE ADVANCE.IDS.IDS_TYPE_CODE = 'VET'</property>
           DTS:refId="Package.EventHandlers[OnError]\Send Mail Task"
           DTS:CreationName="Microsoft.SendMailTask"
           DTS:Description="Send Mail Task"
-          DTS:Disabled="True"
           DTS:DTSID="{845eac6e-e8d9-426e-befd-8d64628cc25d}"
           DTS:ExecutableType="Microsoft.SendMailTask"
           DTS:LocaleID="-1"
@@ -28372,10 +28412,6 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
           Id="Package\Portfolio Dashboard"
           TopLeft="432,286.666666666667" />
         <NodeLayout
-          Size="152,42"
-          Id="Package\Send Mail Task"
-          TopLeft="1682.66666666667,1152.5" />
-        <NodeLayout
           Size="206,42"
           Id="Package\Returned_And_Reviewed\Delete Returned Reviewed"
           TopLeft="47.0000000000001,18.3333333333333" />
@@ -28462,6 +28498,10 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
           Size="298,321"
           Id="Package\Returned_And_Reviewed"
           TopLeft="376.666666666667,1061.16666666667" />
+        <NodeLayout
+          Size="152,42"
+          Id="Package\Send Mail Task"
+          TopLeft="1682.66666666667,1152.5" />
         <NodeLayout
           Size="140,42"
           Id="Package\SOAP\Delete SOAP"
@@ -28942,26 +28982,26 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
           <EdgeLayout.Curve>
             <mssgle:Curve
               StartConnector="{assembly:Null}"
-              EndConnector="181.000000000003,-48.3333333333335"
+              EndConnector="181,-48.3333333333301"
               Start="0,0"
-              End="173.500000000003,-48.3333333333335">
+              End="173.5,-48.3333333333301">
               <mssgle:Curve.Segments>
                 <mssgle:SegmentCollection
                   Capacity="5">
                   <mssgle:LineSegment
-                    End="86.5000000000014,0" />
+                    End="86.5,0" />
                   <mssgle:CubicBezierSegment
-                    Point1="86.5000000000014,0"
-                    Point2="90.5000000000014,0"
-                    Point3="90.5000000000014,-4" />
+                    Point1="86.5,0"
+                    Point2="90.5,0"
+                    Point3="90.5,-4" />
                   <mssgle:LineSegment
-                    End="90.5000000000014,-44.3333333333335" />
+                    End="90.5,-44.3333333333301" />
                   <mssgle:CubicBezierSegment
-                    Point1="90.5000000000014,-44.3333333333335"
-                    Point2="90.5000000000014,-48.3333333333335"
-                    Point3="94.5000000000014,-48.3333333333335" />
+                    Point1="90.5,-44.3333333333301"
+                    Point2="90.5,-48.3333333333301"
+                    Point3="94.5,-48.3333333333301" />
                   <mssgle:LineSegment
-                    End="173.500000000003,-48.3333333333335" />
+                    End="173.5,-48.3333333333301" />
                 </mssgle:SegmentCollection>
               </mssgle:Curve.Segments>
             </mssgle:Curve>
@@ -29508,7 +29548,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
     design-time-name="Package\E-Review Make Table\E-Review Make Table ETL">
     <LayoutInfo>
       <GraphLayout
-        Capacity="16" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph" xmlns:mssgle="clr-namespace:Microsoft.SqlServer.Graph.LayoutEngine;assembly=Microsoft.SqlServer.Graph" xmlns:assembly="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:mssgm="clr-namespace:Microsoft.SqlServer.Graph.Model;assembly=Microsoft.SqlServer.Graph">
+        Capacity="16" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph" xmlns:mssgle="clr-namespace:Microsoft.SqlServer.Graph.LayoutEngine;assembly=Microsoft.SqlServer.Graph" xmlns:assembly="http://schemas.microsoft.com/winfx/2006/xaml">
         <NodeLayout
           Size="158,42"
           Id="Package\E-Review Make Table\E-Review Make Table ETL\Data Conversion"
@@ -29560,9 +29600,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
         <EdgeLayout
@@ -29596,9 +29634,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
         <EdgeLayout
@@ -29632,9 +29668,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
         <EdgeLayout
@@ -29656,9 +29690,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
       </GraphLayout>
@@ -31635,18 +31667,6 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
       </Property>
     </Properties>
   </PipelineComponentMetadata>
-  <DtsEventHandler
-    design-time-name="Package\Send Mail Task.EventHandlers[OnError]">
-    <LayoutInfo>
-      <GraphLayout
-        Capacity="4" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph">
-        <NodeLayout
-          Size="152,42"
-          Id="Package\Send Mail Task.EventHandlers[OnError]\Send Mail Task"
-          TopLeft="339,161" />
-      </GraphLayout>
-    </LayoutInfo>
-  </DtsEventHandler>
   <TaskHost
     design-time-name="Package\Returned_And_Reviewed\Returned and Review ETL">
     <LayoutInfo>
@@ -31802,6 +31822,18 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
       </Property>
     </Properties>
   </PipelineComponentMetadata>
+  <DtsEventHandler
+    design-time-name="Package\Send Mail Task.EventHandlers[OnError]">
+    <LayoutInfo>
+      <GraphLayout
+        Capacity="4" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph">
+        <NodeLayout
+          Size="152,42"
+          Id="Package\Send Mail Task.EventHandlers[OnError]\Send Mail Task"
+          TopLeft="339,161" />
+      </GraphLayout>
+    </LayoutInfo>
+  </DtsEventHandler>
   <TaskHost
     design-time-name="Package\SOAP\SOAP ETL pt 1">
     <LayoutInfo>
@@ -32007,7 +32039,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
     design-time-name="Package\Summary of Qualification Activity\Summary of Qualification Activity ETL">
     <LayoutInfo>
       <GraphLayout
-        Capacity="16" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph" xmlns:mssgle="clr-namespace:Microsoft.SqlServer.Graph.LayoutEngine;assembly=Microsoft.SqlServer.Graph" xmlns:assembly="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:mssgm="clr-namespace:Microsoft.SqlServer.Graph.Model;assembly=Microsoft.SqlServer.Graph">
+        Capacity="16" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph" xmlns:mssgle="clr-namespace:Microsoft.SqlServer.Graph.LayoutEngine;assembly=Microsoft.SqlServer.Graph" xmlns:assembly="http://schemas.microsoft.com/winfx/2006/xaml">
         <NodeLayout
           Size="122,42"
           Id="Package\Summary of Qualification Activity\Summary of Qualification Activity ETL\Multicast"
@@ -32059,9 +32091,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
         <EdgeLayout
@@ -32095,9 +32125,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
         <EdgeLayout
@@ -32131,9 +32159,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
         <EdgeLayout
@@ -32167,9 +32193,7 @@ Error Source: " +  @[System::SourceName] + ". The weekly reports are not refresh
             </mssgle:Curve>
           </EdgeLayout.Curve>
           <EdgeLayout.Labels>
-            <mssgm:EdgeLabel
-              BoundingBox="0,0,0,0"
-              RelativePosition="Any" />
+            <EdgeLabelCollection />
           </EdgeLayout.Labels>
         </EdgeLayout>
       </GraphLayout>
